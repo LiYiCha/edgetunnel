@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ByteNode | 云原生与系统架构实践</title>
+  <meta name="description" content="专注于云原生、分布式系统、Linux 内核与网络协议栈的技术博客，记录工程实践与思考。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #161b27; --bg3: #1e2535; --border: #2a3347;
+      --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+      --accent: #3b82f6; --accent2: #60a5fa;
+      --green: #10b981; --orange: #f59e0b; --purple: #8b5cf6; --red: #ef4444;
+      --mono: 'JetBrains Mono', monospace; --sans: 'Inter', system-ui, sans-serif;
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.7; min-height: 100vh; }
+    nav { position: sticky; top: 0; z-index: 100; background: rgba(15,17,23,.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 58px; }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--purple)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .logo-text { font-weight: 700; font-size: 17px; color: var(--text); letter-spacing: -.3px; }
+    .logo-text span { color: var(--accent2); }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-links a { color: var(--text2); text-decoration: none; font-size: 14px; font-weight: 500; padding: 6px 14px; border-radius: 6px; transition: all .2s; }
+    .nav-links a:hover { color: var(--text); background: var(--bg3); }
+    .nav-links a.active { color: var(--accent2); }
+    .nav-search { display: flex; align-items: center; gap: 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+    .nav-search span { color: var(--text3); font-size: 13px; }
+    .nav-search kbd { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 11px; color: var(--text3); font-family: var(--mono); }
+    .hero { max-width: 1100px; margin: 0 auto; padding: 64px 24px 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.25); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--accent2); font-weight: 500; margin-bottom: 20px; }
+    .hero-badge::before { content: ''; width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .hero h1 { font-size: 38px; font-weight: 700; line-height: 1.2; letter-spacing: -.5px; margin-bottom: 16px; }
+    .hero h1 em { font-style: normal; background: linear-gradient(135deg, var(--accent2), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-desc { color: var(--text2); font-size: 15px; line-height: 1.8; margin-bottom: 28px; }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all .2s; cursor: pointer; border: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #2563eb; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(59,130,246,.3); }
+    .btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+    .hero-stats { display: flex; gap: 28px; margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--border); }
+    .stat-num { font-size: 22px; font-weight: 700; color: var(--text); font-family: var(--mono); }
+    .stat-label { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .terminal { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,.4); }
+    .terminal-bar { background: var(--bg3); padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; } .dot-y { background: #febc2e; } .dot-g { background: #28c840; }
+    .terminal-title { flex: 1; text-align: center; font-size: 12px; color: var(--text3); font-family: var(--mono); }
+    .terminal-body { padding: 20px; font-family: var(--mono); font-size: 13px; line-height: 1.9; }
+    .t-prompt { color: var(--green); } .t-cmd { color: var(--text); } .t-out { color: var(--text2); }
+    .t-key { color: var(--accent2); } .t-val { color: var(--orange); } .t-str { color: var(--green); }
+    .t-cursor { display: inline-block; width: 8px; height: 14px; background: var(--accent2); animation: blink .9s step-end infinite; vertical-align: middle; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .main { max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; display: grid; grid-template-columns: 1fr 300px; gap: 40px; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .section-title { font-size: 16px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ''; width: 3px; height: 18px; background: var(--accent); border-radius: 2px; }
+    .section-link { font-size: 13px; color: var(--accent2); text-decoration: none; }
+    .section-link:hover { text-decoration: underline; }
+    .post-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-decoration: none; display: block; transition: all .2s; margin-bottom: 12px; position: relative; overflow: hidden; }
+    .post-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: transparent; transition: background .2s; }
+    .post-card:hover { border-color: rgba(59,130,246,.4); transform: translateX(2px); }
+    .post-card:hover::before { background: var(--accent); }
+    .post-card.featured { border-color: rgba(139,92,246,.3); background: linear-gradient(135deg, rgba(139,92,246,.05), var(--bg2)); }
+    .post-card.featured::before { background: var(--purple); }
+    .post-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .post-tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .5px; }
+    .tag-cloud { background: rgba(16,185,129,.12); color: var(--green); border: 1px solid rgba(16,185,129,.2); }
+    .tag-linux { background: rgba(245,158,11,.12); color: var(--orange); border: 1px solid rgba(245,158,11,.2); }
+    .tag-net { background: rgba(59,130,246,.12); color: var(--accent2); border: 1px solid rgba(59,130,246,.2); }
+    .tag-perf { background: rgba(239,68,68,.12); color: var(--red); border: 1px solid rgba(239,68,68,.2); }
+    .tag-k8s { background: rgba(139,92,246,.12); color: var(--purple); border: 1px solid rgba(139,92,246,.2); }
+    .tag-rust { background: rgba(245,158,11,.12); color: var(--orange); border: 1px solid rgba(245,158,11,.2); }
+    .post-date { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+    .post-featured-badge { font-size: 11px; color: var(--purple); background: rgba(139,92,246,.12); border: 1px solid rgba(139,92,246,.2); padding: 2px 8px; border-radius: 4px; }
+    .post-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 8px; line-height: 1.4; letter-spacing: -.2px; }
+    .post-card:hover .post-title { color: var(--accent2); }
+    .post-excerpt { font-size: 13.5px; color: var(--text2); line-height: 1.7; margin-bottom: 14px; }
+    .post-footer { display: flex; align-items: center; justify-content: space-between; }
+    .post-reading { font-size: 12px; color: var(--text3); }
+    .post-views { font-size: 12px; color: var(--text3); }
+    .post-arrow { color: var(--text3); font-size: 14px; transition: transform .2s; }
+    .post-card:hover .post-arrow { transform: translateX(4px); color: var(--accent2); }
+    .sidebar { display: flex; flex-direction: column; gap: 20px; }
+    .widget { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .widget-title { font-size: 13px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 16px; }
+    .author-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 12px; }
+    .author-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .author-bio { font-size: 13px; color: var(--text2); margin-top: 4px; line-height: 1.6; }
+    .author-links { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .author-link { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text3); text-decoration: none; padding: 5px 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
+    .author-link:hover { color: var(--accent2); border-color: var(--accent); }
+    .tags-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag-item { font-size: 12px; color: var(--text2); background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; text-decoration: none; font-family: var(--mono); transition: all .2s; }
+    .tag-item:hover { color: var(--accent2); border-color: var(--accent); }
+    .tag-count { font-size: 10px; color: var(--text3); }
+    .recent-list { display: flex; flex-direction: column; gap: 14px; }
+    .recent-item { display: flex; gap: 12px; text-decoration: none; }
+    .recent-num { font-size: 20px; font-weight: 800; color: var(--border); font-family: var(--mono); line-height: 1; min-width: 24px; }
+    .recent-title { font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.4; transition: color .2s; }
+    .recent-item:hover .recent-title { color: var(--accent2); }
+    .recent-date { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+    .series-list { display: flex; flex-direction: column; gap: 8px; }
+    .series-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--bg3); border-radius: 8px; text-decoration: none; transition: all .2s; }
+    .series-item:hover { background: rgba(59,130,246,.1); }
+    .series-icon { font-size: 16px; }
+    .series-name { font-size: 13px; color: var(--text2); font-weight: 500; }
+    .series-item:hover .series-name { color: var(--text); }
+    .series-count { margin-left: auto; font-size: 11px; color: var(--text3); background: var(--bg2); padding: 2px 7px; border-radius: 10px; font-family: var(--mono); }
+    footer { border-top: 1px solid var(--border); padding: 32px 24px; }
+    .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .footer-copy { font-size: 13px; color: var(--text3); }
+    .footer-copy a { color: var(--text2); text-decoration: none; }
+    .footer-copy a:hover { color: var(--accent2); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { font-size: 13px; color: var(--text3); text-decoration: none; }
+    .footer-links a:hover { color: var(--text2); }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-visual { display: none; }
+      .main { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .nav-search { display: none; }
+    }
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 28px; }
+      .hero-stats { gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="logo">
+      <div class="logo-icon">&#x26A1;</div>
+      <span class="logo-text">Byte<span>Node</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="/" class="active">&#x9996;&#x9875;</a>
+      <a href="/archives">&#x5F52;&#x6863;</a>
+      <a href="/series">&#x7CFB;&#x5217;</a>
+      <a href="/about">&#x5173;&#x4E8E;</a>
+    </div>
+    <div class="nav-search">
+      <span>&#x641C;&#x7D22;&#x6587;&#x7AE0;...</span>
+      <kbd>&#x2318;K</kbd>
+    </div>
+  </div>
+</nav>
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">&#x6301;&#x7EED;&#x66F4;&#x65B0;&#x4E2D;</div>
+    <h1>&#x4E91;&#x539F;&#x751F; &middot; &#x7CFB;&#x7EDF; &middot; <em>&#x7F51;&#x7EDC;</em><br/>&#x5DE5;&#x7A0B;&#x5E08;&#x7684;&#x6280;&#x672F;&#x7B14;&#x8BB0;</h1>
+    <p class="hero-desc">&#x4E13;&#x6CE8;&#x4E8E; Linux &#x5185;&#x6838;&#x3001;&#x4E91;&#x539F;&#x751F;&#x67B6;&#x6784;&#x3001;&#x5206;&#x5E03;&#x5F0F;&#x7CFB;&#x7EDF;&#x4E0E;&#x7F51;&#x7EDC;&#x534F;&#x8BAE;&#x6808;&#x7684;&#x6DF1;&#x5EA6;&#x5B9E;&#x8DF5;&#x3002;&#x8BB0;&#x5F55;&#x771F;&#x5B9E;&#x5DE5;&#x7A0B;&#x573A;&#x666F;&#x4E2D;&#x7684;&#x95EE;&#x9898;&#x4E0E;&#x89E3;&#x6CD5;&#xFF0C;&#x62D2;&#x7EDD;&#x8868;&#x9762;&#x6587;&#x7AE0;&#x3002;</p>
+    <div class="hero-actions">
+      <a href="/archives" class="btn btn-primary">&#x1F4DA; &#x6D4F;&#x89C8;&#x6587;&#x7AE0;</a>
+      <a href="/series" class="btn btn-ghost">&#x1F5C2; &#x7CFB;&#x5217;&#x4E13;&#x680F;</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-num">147</div><div class="stat-label">&#x7BC7;&#x6587;&#x7AE0;</div></div>
+      <div class="stat"><div class="stat-num">23</div><div class="stat-label">&#x4E2A;&#x7CFB;&#x5217;</div></div>
+      <div class="stat"><div class="stat-num">4.2k</div><div class="stat-label">&#x6708;&#x8BBF;&#x95EE;</div></div>
+      <div class="stat"><div class="stat-num">2019</div><div class="stat-label">&#x5E74;&#x521B;&#x5EFA;</div></div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <div class="terminal-title">~ zsh</div>
+      </div>
+      <div class="terminal-body">
+        <div><span class="t-prompt">&#x276F;</span> <span class="t-cmd">kubectl get nodes -o wide</span></div>
+        <div class="t-out">NAME&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;STATUS&nbsp;&nbsp;&nbsp;ROLES&nbsp;&nbsp;&nbsp;&nbsp;AGE</div>
+        <div class="t-out">node-master-01&nbsp;&nbsp;&nbsp;Ready&nbsp;&nbsp;&nbsp;&nbsp;control&nbsp;&nbsp;47d</div>
+        <div class="t-out">node-worker-01&nbsp;&nbsp;&nbsp;Ready&nbsp;&nbsp;&nbsp;&nbsp;&lt;none&gt;&nbsp;&nbsp;&nbsp;47d</div>
+        <div class="t-out">node-worker-02&nbsp;&nbsp;&nbsp;Ready&nbsp;&nbsp;&nbsp;&nbsp;&lt;none&gt;&nbsp;&nbsp;&nbsp;47d</div>
+        <br/>
+        <div><span class="t-prompt">&#x276F;</span> <span class="t-cmd">ss -s</span></div>
+        <div class="t-out">Total: <span class="t-val">1024</span> (<span class="t-key">kernel</span> <span class="t-val">1089</span>)</div>
+        <div class="t-out">TCP:&nbsp;&nbsp;<span class="t-val">312</span> estab <span class="t-val">4</span>, closed <span class="t-val">8</span></div>
+        <br/>
+        <div><span class="t-prompt">&#x276F;</span> <span class="t-cursor"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="main">
+  <div class="content">
+    <div class="section-header">
+      <div class="section-title">&#x6700;&#x65B0;&#x6587;&#x7AE0;</div>
+      <a href="/archives" class="section-link">&#x5168;&#x90E8;&#x6587;&#x7AE0; &rarr;</a>
+    </div>
+    <div class="posts">
+      <a href="/posts/ebpf-network-observability" class="post-card featured">
+        <div class="post-meta">
+          <span class="post-tag tag-net">Network</span>
+          <span class="post-tag tag-linux">Linux</span>
+          <span class="post-featured-badge">&#x2605; &#x7CBE;&#x9009;</span>
+          <span class="post-date">2026-02-14</span>
+        </div>
+        <div class="post-title">&#x7528; eBPF &#x5B9E;&#x73B0;&#x96F6;&#x4FB5;&#x5165;&#x7684;&#x7F51;&#x7EDC;&#x53EF;&#x89C2;&#x6D4B;&#x6027;&#xFF1A;&#x4ECE; XDP &#x5230; TC Hook &#x7684;&#x5B8C;&#x6574;&#x5B9E;&#x8DF5;</div>
+        <div class="post-excerpt">&#x4F20;&#x7EDF;&#x7684;&#x7F51;&#x7EDC;&#x76D1;&#x63A7;&#x65B9;&#x6848;&#x8981;&#x4E48;&#x9700;&#x8981;&#x4FEE;&#x6539;&#x5E94;&#x7528;&#x4EE3;&#x7801;&#xFF0C;&#x8981;&#x4E48;&#x4F9D;&#x8D56;&#x5185;&#x6838;&#x6A21;&#x5757;&#xFF0C;&#x7EF4;&#x62A4;&#x6210;&#x672C;&#x6781;&#x9AD8;&#x3002;&#x672C;&#x6587;&#x4ECB;&#x7ECD;&#x5982;&#x4F55;&#x5229;&#x7528; eBPF &#x7684; XDP &#x548C; TC &#x6302;&#x8F7D;&#x70B9;&#xFF0C;&#x5728;&#x4E0D;&#x4FEE;&#x6539;&#x4EFB;&#x4F55;&#x4E1A;&#x52A1;&#x4EE3;&#x7801;&#x7684;&#x524D;&#x63D0;&#x4E0B;&#xFF0C;&#x5B9E;&#x73B0; L3/L4 &#x5C42;&#x7684;&#x5168;&#x91CF;&#x6D41;&#x91CF;&#x91C7;&#x96C6;&#x4E0E;&#x5206;&#x6790;&#x3002;</div>
+        <div class="post-footer">
+          <span class="post-reading">&#x23F1; &#x9884;&#x8BA1;&#x9605;&#x8BFB; 18 &#x5206;&#x949F;</span>
+          <span class="post-views">&#x1F441; 3.2k &#x6B21;&#x9605;&#x8BFB;</span>
+          <span class="post-arrow">&rarr;</span>
+        </div>
+      </a>
+      <a href="/posts/k8s-cni-deep-dive" class="post-card">
+        <div class="post-meta">
+          <span class="post-tag tag-k8s">Kubernetes</span>
+          <span class="post-tag tag-net">Network</span>
+          <span class="post-date">2026-02-08</span>
+        </div>
+        <div class="post-title">Kubernetes CNI &#x63D2;&#x4EF6;&#x539F;&#x7406;&#x6DF1;&#x6790;&#xFF1A;Calico VXLAN &#x6A21;&#x5F0F;&#x4E0B;&#x7684;&#x6570;&#x636E;&#x5305;&#x65C5;&#x7A0B;</div>
+        <div class="post-excerpt">&#x4E00;&#x4E2A; Pod &#x53D1;&#x51FA;&#x7684;&#x6570;&#x636E;&#x5305;&#xFF0C;&#x662F;&#x5982;&#x4F55;&#x7A7F;&#x8D8A; veth pair&#x3001;Linux bridge&#x3001;VXLAN tunnel&#xFF0C;&#x6700;&#x7EC8;&#x5230;&#x8FBE;&#x53E6;&#x4E00;&#x4E2A;&#x8282;&#x70B9;&#x4E0A;&#x7684; Pod &#x7684;&#xFF1F;&#x672C;&#x6587;&#x901A;&#x8FC7; tcpdump + ip route &#x9010;&#x8DF3;&#x8FFD;&#x8E2A;&#xFF0C;&#x8FD8;&#x539F; Calico &#x5728; VXLAN &#x6A21;&#x5F0F;&#x4E0B;&#x7684;&#x5B8C;&#x6574;&#x8F6C;&#x53D1;&#x8DEF;&#x5F84;&#x3002;</div>
+        <div class="post-footer">
+          <span class="post-reading">&#x23F1; &#x9884;&#x8BA1;&#x9605;&#x8BFB; 22 &#x5206;&#x949F;</span>
+          <span class="post-views">&#x1F441; 1.8k &#x6B21;&#x9605;&#x8BFB;</span>
+          <span class="post-arrow">&rarr;</span>
+        </div>
+      </a>
+      <a href="/posts/rust-async-runtime" class="post-card">
+        <div class="post-meta">
+          <span class="post-tag tag-rust">Rust</span>
+          <span class="post-date">2026-01-29</span>
+        </div>
+        <div class="post-title">&#x4ECE;&#x96F6;&#x5B9E;&#x73B0;&#x4E00;&#x4E2A; Rust &#x5F02;&#x6B65;&#x8FD0;&#x884C;&#x65F6;&#xFF1A;&#x7406;&#x89E3; Future&#x3001;Waker &#x4E0E; Executor</div>
+        <div class="post-excerpt">Tokio &#x548C; async-std &#x80CC;&#x540E;&#x7684;&#x673A;&#x5236;&#x662F;&#x4EC0;&#x4E48;&#xFF1F;&#x672C;&#x6587;&#x4E0D;&#x4F9D;&#x8D56;&#x4EFB;&#x4F55;&#x5F02;&#x6B65;&#x5E93;&#xFF0C;&#x624B;&#x5199;&#x4E00;&#x4E2A;&#x6700;&#x5C0F;&#x53EF;&#x7528;&#x7684; Executor&#xFF0C;&#x901A;&#x8FC7; 500 &#x884C;&#x4EE3;&#x7801;&#x7406;&#x89E3; Rust &#x5F02;&#x6B65;&#x6A21;&#x578B;&#x7684;&#x672C;&#x8D28;&#x3002;</div>
+        <div class="post-footer">
+          <span class="post-reading">&#x23F1; &#x9884;&#x8BA1;&#x9605;&#x8BFB; 30 &#x5206;&#x949F;</span>
+          <span class="post-views">&#x1F441; 2.4k &#x6B21;&#x9605;&#x8BFB;</span>
+          <span class="post-arrow">&rarr;</span>
+        </div>
+      </a>
+      <a href="/posts/linux-memory-reclaim" class="post-card">
+        <div class="post-meta">
+          <span class="post-tag tag-linux">Linux</span>
+          <span class="post-tag tag-perf">Performance</span>
+          <span class="post-date">2026-01-17</span>
+        </div>
+        <div class="post-title">Linux &#x5185;&#x5B58;&#x56DE;&#x6536;&#x673A;&#x5236;&#x8BE6;&#x89E3;&#xFF1A;kswapd&#x3001;&#x76F4;&#x63A5;&#x56DE;&#x6536;&#x4E0E; OOM Killer &#x7684;&#x89E6;&#x53D1;&#x6761;&#x4EF6;</div>
+        <div class="post-excerpt">&#x7EBF;&#x4E0A;&#x670D;&#x52A1;&#x5076;&#x53D1; OOM &#x4F46; free &#x663E;&#x793A;&#x5185;&#x5B58;&#x5145;&#x8DB3;&#xFF1F;&#x8FD9;&#x5F80;&#x5F80;&#x662F;&#x5185;&#x5B58;&#x788E;&#x7247;&#x6216; cgroup &#x9650;&#x5236;&#x5BFC;&#x81F4;&#x7684;&#x3002;&#x672C;&#x6587;&#x6DF1;&#x5165;&#x5206;&#x6790; Linux &#x5185;&#x5B58;&#x56DE;&#x6536;&#x7684;&#x4E09;&#x6761;&#x8DEF;&#x5F84;&#xFF0C;&#x4EE5;&#x53CA;&#x5982;&#x4F55;&#x901A;&#x8FC7; /proc/vmstat &#x548C; perf &#x5B9A;&#x4F4D;&#x5185;&#x5B58;&#x538B;&#x529B;&#x7684;&#x6839;&#x56E0;&#x3002;</div>
+        <div class="post-footer">
+          <span class="post-reading">&#x23F1; &#x9884;&#x8BA1;&#x9605;&#x8BFB; 25 &#x5206;&#x949F;</span>
+          <span class="post-views">&#x1F441; 5.1k &#x6B21;&#x9605;&#x8BFB;</span>
+          <span class="post-arrow">&rarr;</span>
+        </div>
+      </a>
+      <a href="/posts/tcp-bbr-congestion" class="post-card">
+        <div class="post-meta">
+          <span class="post-tag tag-net">Network</span>
+          <span class="post-tag tag-perf">Performance</span>
+          <span class="post-date">2026-01-05</span>
+        </div>
+        <div class="post-title">TCP BBR &#x62E5;&#x5851;&#x63A7;&#x5236;&#x7B97;&#x6CD5;&#x539F;&#x7406;&#x4E0E;&#x8C03;&#x4F18;&#xFF1A;&#x4E3A;&#x4EC0;&#x4E48;&#x5B83;&#x5728;&#x9AD8;&#x5EF6;&#x8FDF;&#x94FE;&#x8DEF;&#x4E0A;&#x8868;&#x73B0;&#x66F4;&#x597D;</div>
+        <div class="post-excerpt">BBR &#x4E0E;&#x4F20;&#x7EDF; CUBIC &#x7684;&#x6838;&#x5FC3;&#x5DEE;&#x5F02;&#x5728;&#x4E8E;&#xFF1A;&#x5B83;&#x4E0D;&#x4EE5;&#x4E22;&#x5305;&#x4F5C;&#x4E3A;&#x62E5;&#x5851;&#x4FE1;&#x53F7;&#xFF0C;&#x800C;&#x662F;&#x901A;&#x8FC7;&#x6D4B;&#x91CF; BDP&#xFF08;&#x5E26;&#x5BBD;&#x65F6;&#x5EF6;&#x79EF;&#xFF09;&#x6765;&#x63A2;&#x6D4B;&#x7F51;&#x7EDC;&#x74B6;&#x9888;&#x3002;&#x672C;&#x6587;&#x7ED3;&#x5408; tc netem &#x6A21;&#x62DF;&#x5F31;&#x7F51;&#x73AF;&#x5883;&#xFF0C;&#x5BF9;&#x6BD4;&#x4E24;&#x79CD;&#x7B97;&#x6CD5;&#x5728;&#x4E0D;&#x540C; RTT &#x548C;&#x4E22;&#x5305;&#x7387;&#x4E0B;&#x7684;&#x5438;&#x5410;&#x91CF;&#x8868;&#x73B0;&#x3002;</div>
+        <div class="post-footer">
+          <span class="post-reading">&#x23F1; &#x9884;&#x8BA1;&#x9605;&#x8BFB; 16 &#x5206;&#x949F;</span>
+          <span class="post-views">&#x1F441; 4.7k &#x6B21;&#x9605;&#x8BFB;</span>
+          <span class="post-arrow">&rarr;</span>
+        </div>
+      </a>
+    </div>
+  </div>
+  <aside class="sidebar">
+    <div class="widget">
+      <div class="author-avatar">&#x1F9D1;&#x200D;&#x1F4BB;</div>
+      <div class="author-name">Kai Chen</div>
+      <div class="author-bio">&#x57FA;&#x7840;&#x8BBE;&#x65BD;&#x5DE5;&#x7A0B;&#x5E08;&#xFF0C;&#x4E13;&#x6CE8; Linux &#x5185;&#x6838;&#x3001;&#x4E91;&#x539F;&#x751F;&#x4E0E;&#x7F51;&#x7EDC;&#x534F;&#x8BAE;&#x6808;&#x3002;&#x66FE;&#x5C31;&#x804C;&#x4E8E;&#x67D0;&#x4E91;&#x5382;&#x5546;&#x7F51;&#x7EDC;&#x56E2;&#x961F;&#xFF0C;&#x73B0;&#x72EC;&#x7ACB;&#x7814;&#x7A76;&#x5458;&#x3002;</div>
+      <div class="author-links">
+        <a href="https://github.com" class="author-link">GitHub</a>
+        <a href="/feed.xml" class="author-link">RSS</a>
+        <a href="/about" class="author-link">&#x5173;&#x4E8E;</a>
+      </div>
+    </div>
+    <div class="widget">
+      <div class="widget-title">&#x7CFB;&#x5217;&#x4E13;&#x680F;</div>
+      <div class="series-list">
+        <a href="/series/ebpf" class="series-item">
+          <span class="series-icon">&#x1F52C;</span>
+          <span class="series-name">eBPF &#x5B9E;&#x6218;&#x7CFB;&#x5217;</span>
+          <span class="series-count">12&#x7BC7;</span>
+        </a>
+        <a href="/series/k8s-internals" class="series-item">
+          <span class="series-icon">&#x2638;&#xFE0F;</span>
+          <span class="series-name">K8s &#x6E90;&#x7801;&#x89E3;&#x6790;</span>
+          <span class="series-count">18&#x7BC7;</span>
+        </a>
+        <a href="/series/linux-kernel" class="series-item">
+          <span class="series-icon">&#x1F427;</span>
+          <span class="series-name">Linux &#x5185;&#x6838;&#x7B14;&#x8BB0;</span>
+          <span class="series-count">31&#x7BC7;</span>
+        </a>
+        <a href="/series/rust-systems" class="series-item">
+          <span class="series-icon">&#x1F980;</span>
+          <span class="series-name">Rust &#x7CFB;&#x7EDF;&#x7F16;&#x7A0B;</span>
+          <span class="series-count">9&#x7BC7;</span>
+        </a>
+        <a href="/series/network" class="series-item">
+          <span class="series-icon">&#x1F310;</span>
+          <span class="series-name">&#x7F51;&#x7EDC;&#x534F;&#x8BAE;&#x6DF1;&#x5EA6;&#x89E3;&#x6790;</span>
+          <span class="series-count">24&#x7BC7;</span>
+        </a>
+      </div>
+    </div>
+    <div class="widget">
+      <div class="widget-title">&#x6807;&#x7B7E;</div>
+      <div class="tags-cloud">
+        <a href="/tags/linux" class="tag-item">Linux <span class="tag-count">47</span></a>
+        <a href="/tags/kubernetes" class="tag-item">Kubernetes <span class="tag-count">31</span></a>
+        <a href="/tags/ebpf" class="tag-item">eBPF <span class="tag-count">18</span></a>
+        <a href="/tags/rust" class="tag-item">Rust <span class="tag-count">14</span></a>
+        <a href="/tags/tcp" class="tag-item">TCP/IP <span class="tag-count">22</span></a>
+        <a href="/tags/perf" class="tag-item">&#x6027;&#x80FD;&#x8C03;&#x4F18; <span class="tag-count">19</span></a>
+        <a href="/tags/golang" class="tag-item">Go <span class="tag-count">11</span></a>
+        <a href="/tags/cni" class="tag-item">CNI <span class="tag-count">8</span></a>
+        <a href="/tags/observability" class="tag-item">&#x53EF;&#x89C2;&#x6D4B;&#x6027; <span class="tag-count">13</span></a>
+        <a href="/tags/cloudflare" class="tag-item">Cloudflare <span class="tag-count">6</span></a>
+      </div>
+    </div>
+    <div class="widget">
+      <div class="widget-title">&#x70ED;&#x95E8;&#x6587;&#x7AE0;</div>
+      <div class="recent-list">
+        <a href="/posts/linux-memory-reclaim" class="recent-item">
+          <span class="recent-num">01</span>
+          <div class="recent-info">
+            <div class="recent-title">Linux &#x5185;&#x5B58;&#x56DE;&#x6536;&#x673A;&#x5236;&#x8BE6;&#x89E3;</div>
+            <div class="recent-date">5.1k &#x6B21;&#x9605;&#x8BFB;</div>
+          </div>
+        </a>
+        <a href="/posts/tcp-bbr-congestion" class="recent-item">
+          <span class="recent-num">02</span>
+          <div class="recent-info">
+            <div class="recent-title">TCP BBR &#x62E5;&#x5851;&#x63A7;&#x5236;&#x7B97;&#x6CD5;&#x539F;&#x7406;&#x4E0E;&#x8C03;&#x4F18;</div>
+            <div class="recent-date">4.7k &#x6B21;&#x9605;&#x8BFB;</div>
+          </div>
+        </a>
+        <a href="/posts/ebpf-network-observability" class="recent-item">
+          <span class="recent-num">03</span>
+          <div class="recent-info">
+            <div class="recent-title">&#x7528; eBPF &#x5B9E;&#x73B0;&#x96F6;&#x4FB5;&#x5165;&#x7684;&#x7F51;&#x7EDC;&#x53EF;&#x89C2;&#x6D4B;&#x6027;</div>
+            <div class="recent-date">3.2k &#x6B21;&#x9605;&#x8BFB;</div>
+          </div>
+        </a>
+        <a href="/posts/cloudflare-workers-edge" class="recent-item">
+          <span class="recent-num">04</span>
+          <div class="recent-info">
+            <div class="recent-title">Cloudflare Workers &#x8FB9;&#x7F18;&#x8BA1;&#x7B97;&#x5B9E;&#x8DF5;</div>
+            <div class="recent-date">2.9k &#x6B21;&#x9605;&#x8BFB;</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </aside>
+</div>
+<footer>
+  <div class="footer-inner">
+    <div class="footer-copy">
+      &copy; 2019&ndash;2026 <a href="/">ByteNode</a> &middot; &#x7CA4;ICP&#x5907;2021XXXXXX&#x53F7; &middot; &#x57FA;&#x4E8E; <a href="https://pages.cloudflare.com" target="_blank">Cloudflare Pages</a> &#x6784;&#x5EFA;
+    </div>
+    <div class="footer-links">
+      <a href="/privacy">&#x9690;&#x79C1;&#x653F;&#x7B56;</a>
+      <a href="/sitemap.xml">Sitemap</a>
+      <a href="/feed.xml">&#x1F7E0; RSS</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
